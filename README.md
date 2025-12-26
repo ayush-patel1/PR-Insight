@@ -18,3 +18,34 @@ What it does->
 >Assigns a risk level (Low / Medium / High)
 
 >Posts this as a PR comment
+
+
+backend
+
+backend/
+│
+├── app/
+│   ├── api/
+│   │   ├── __init__.py
+│   │   ├── github_webhook.py
+│   │   └── health.py
+│   │
+│   ├── services/
+│   │   ├── __init__.py
+│   │   ├── github_client.py
+│   │   └── pr_service.py
+│   │
+│   ├── models/
+│   │   ├── __init__.py
+│   │   └── pr.py
+│   │
+│   ├── utils/
+│   │   ├── __init__.py
+│   │   ├── webhook_verify.py
+│   │   └── logger.py
+│   │
+│   └── main.py
+│
+├── requirements.txt
+├── .env.example
+└── README.md
