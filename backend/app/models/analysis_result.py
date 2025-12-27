@@ -13,3 +13,5 @@ class AnalysisResult(BaseModel):
     checklist:Optional[List[str]]=Field(None,description="Checklist items generated from the analysis")
     recommendations:Optional[List[str]]=Field(None,description="Recommendations based on the analysis") 
     risk:RiskLevel=Field(...,description="Risk level associated with the analysis(Low,Medium,High)")
+    issues_found:Optional[List[str]]=Field(None,description="List of issues found during the analysis")
+    
