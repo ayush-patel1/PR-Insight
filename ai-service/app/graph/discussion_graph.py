@@ -1,4 +1,5 @@
-from typing import TypedDict, List, Dict
+from typing import List, Dict, Any
+from pydantic import BaseModel, Field
 from langgraph.graph import StateGraph, END
 from app.chains.discussion_chain import (
     create_discussion_chain,
@@ -7,70 +8,74 @@ from app.chains.discussion_chain import (
 )
 
 
-class GraphState(TypedDict):
-    """State for the discussion analysis graph"""
-    messages: List[Dict]
-    formatted_discussion: str
-    raw_analysis: str
-    analysis: Dict
+class GraphState(BaseModel):
+    messages: List[Dict[str, Any]] = Field(
+        ...,
+        min_items=1,
+        description="List of discussion messages"
+    )
+
+    formatted_discussion: str = Field(
+        default="",
+        min_length=1,
+        description="Formatted discussion text"
+    )
+
+    raw_analysis: str = Field(
+        default="",
+        min_length=1,
+        description="Raw LLM analysis output"
+    )
+
+    analysis: Dict[str, Any] = Field(
+        default_factory=dict,
+        description="Parsed structured analysis"
+    )
 
 
 def format_node(state: GraphState) -> GraphState:
-    """Node to format messages for analysis"""
-    messages = state["messages"]
-    formatted = format_messages_for_analysis(messages)
-    
-    return {
-        **state,
+    formatted = format_messages_for_analysis(state.messages)
+
+    return state.copy(update={
         "formatted_discussion": formatted
-    }
+    })
 
 
 def analyze_node(state: GraphState) -> GraphState:
-    """Node to analyze the discussion using LangChain"""
     chain = create_discussion_chain()
-    
-    discussion = state["formatted_discussion"]
-    response = chain.invoke({"discussion": discussion})
-    
-    # Extract text from response
-    raw_analysis = response.content if hasattr(response, 'content') else str(response)
-    
-    return {
-        **state,
+
+    response = chain.invoke({
+        "discussion": state.formatted_discussion
+    })
+
+    raw_analysis = response.content if hasattr(response, "content") else str(response)
+
+    return state.copy(update={
         "raw_analysis": raw_analysis
-    }
+    })
 
 
 def parse_node(state: GraphState) -> GraphState:
-    """Node to parse the analysis into structured format"""
-    raw_analysis = state["raw_analysis"]
-    parsed = parse_analysis_response(raw_analysis)
-    
-    return {
-        **state,
+    parsed = parse_analysis_response(state.raw_analysis)
+
+    return state.copy(update={
         "analysis": parsed
-    }
+    })
 
 
 def create_discussion_graph():
-    """Create LangGraph workflow for discussion analysis"""
-    
-    # Create graph
     workflow = StateGraph(GraphState)
-    
-    # Add nodes
+
+    #create nodes
     workflow.add_node("format", format_node)
     workflow.add_node("analyze", analyze_node)
     workflow.add_node("parse", parse_node)
     
-    # Add edges
+    #set edges  between nodes
     workflow.set_entry_point("format")
     workflow.add_edge("format", "analyze")
     workflow.add_edge("analyze", "parse")
     workflow.add_edge("parse", END)
-    
-    # Compile graph
-    app = workflow.compile()
-    
-    return app
+
+    graph=workflow.compile()
+    return graph
